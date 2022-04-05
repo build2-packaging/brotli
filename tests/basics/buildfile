@@ -1,0 +1,3 @@
+import libs = libbrotli%lib{brotli}
+
+exe{driver}: {h c}{**} $libs testscript{**}

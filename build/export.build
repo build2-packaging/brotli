@@ -1,0 +1,6 @@
+$out_root/
+{
+  include libbrotli/
+}
+
+export $out_root/libbrotli/$import.target

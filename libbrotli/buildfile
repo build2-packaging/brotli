@@ -1,0 +1,43 @@
+intf_libs = # Interface dependencies.
+impl_libs = # Implementation dependencies.
+#import xxxx_libs += libhello%lib{hello}
+
+lib{brotli}: {h c}{**} $impl_libs $intf_libs
+
+h{export}@./: c.importable = false
+
+# Build options.
+#
+c.poptions =+ "-I$out_root" "-I$src_root"
+
+{hbmia obja}{*}: c.poptions += -DLIBBROTLI_STATIC_BUILD
+{hbmis objs}{*}: c.poptions += -DLIBBROTLI_SHARED_BUILD
+
+# Export options.
+#
+lib{brotli}:
+{
+  c.export.poptions = "-I$out_root" "-I$src_root"
+  c.export.libs = $intf_libs
+}
+
+liba{brotli}: c.export.poptions += -DLIBBROTLI_STATIC
+libs{brotli}: c.export.poptions += -DLIBBROTLI_SHARED
+
+# For pre-releases use the complete version to make sure they cannot be used
+# in place of another pre-release or the final version. See the version module
+# for details on the version.* variable values.
+#
+if $version.pre_release
+  lib{brotli}: bin.lib.version = "-$version.project_id"
+else
+  lib{brotli}: bin.lib.version = "-$version.major.$version.minor"
+
+# Install into the libbrotli/ subdirectory of, say, /usr/include/
+# recreating subdirectories.
+#
+h{*}:
+{
+  install         = include/libbrotli/
+  install.subdirs = true
+}

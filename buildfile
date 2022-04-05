@@ -1,0 +1,5 @@
+./: {*/ -build/ -upstream/} doc{README} legal{LICENSE} manifest
+
+# Don't install tests.
+#
+tests/: install = false
