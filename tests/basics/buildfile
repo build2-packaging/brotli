@@ -1,3 +1,7 @@
-import libs = libbrotli%lib{brotli}
+import libs_enc = libbrotli%lib{brotlienc}
+import libs_dec = libbrotli%lib{brotlidec}
 
-exe{driver}: {h c}{**} $libs testscript{**}
+./: exe{driver-enc driver-dec}
+
+exe{driver-enc}: c{driver-enc} $libs_enc
+exe{driver-dec}: c{driver-dec} $libs_dec
