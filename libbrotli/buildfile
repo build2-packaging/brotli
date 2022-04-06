@@ -1,43 +1,100 @@
-intf_libs = # Interface dependencies.
-impl_libs = # Implementation dependencies.
-#import xxxx_libs += libhello%lib{hello}
+brotli_libs = brotlicommon brotlienc brotlidec
 
-lib{brotli}: {h c}{**} $impl_libs $intf_libs
+./: lib{$brotli_libs}
 
-h{export}@./: c.importable = false
+lib{brotlicommon}: include/h{**} common/{h c}{**}
+lib{brotlienc}:    include/h{**} enc/{h c}{**} lib{brotlicommon}
+lib{brotlidec}:    include/h{**} dec/{h c}{**} lib{brotlicommon}
+
+# @@ TMP Not distributing common/dictionary.bin* because its only purpose,
+#    according to common/dictionary.h, is the sharing of the dictionary data
+#    between multiple languages (e.g., the C and Java implementations).
+#
+#    common/dictionary.bin is the static dictionary defined in the RFC and
+#    common/dictionary.bin.br is the compressed version of that file.
+#
+#    By default the dictionary data is inline in common/dictionary.c but if
+#    BROTLI_EXTERNAL_DICTIONARY_DATA is defined that data is omitted and the
+#    user can set the dictionary data using BrotliSetDictionaryData(const
+#    uint8_t*) in common/dictionary.h.
+#
+
+linux   = ($c.target.class  == 'linux')
+freebsd = ($c.target.system == 'freebsd')
+macos   = ($c.target.class  == 'macos')
+windows = ($c.target.class  == 'windows')
+bsd     = ($c.target.class  == 'bsd')
 
 # Build options.
 #
-c.poptions =+ "-I$out_root" "-I$src_root"
+c.poptions =+ "-I$src_base/include"
 
-{hbmia obja}{*}: c.poptions += -DLIBBROTLI_STATIC_BUILD
-{hbmis objs}{*}: c.poptions += -DLIBBROTLI_SHARED_BUILD
+# These OS_* macros are (currently) only used by common/platform.h to decide
+# which byte order header to include. (There are no Windows or OpenBSD/NetBSD
+# macros.)
+#
+# @@ TMP Their logic differs from ours in libbuild2-autoconf in that they
+#    include <machine/endian.h> on FreeBSD while we do sys/endian.h for both
+#    FreeBSD and NetBSD (the latter doesn't have machine/endian.h).
+#
+if $linux
+  c.poptions += -DOS_LINUX
+elif $freebsd
+  c.poptions += -DOS_FREEBSD
+elif $macos
+  c.poptions += -DOS_MACOSX
+elif $windows
+{
+  # These macros are used (only) for the usual dllexport/dllimport logic on
+  # Windows (see include/brotli/port.h). Note that the upstream cmake build
+  # defines them on all operating systems for some reason (but the configure
+  # build does not).
+  #
+  objs{*}:        c.poptions += -DBROTLI_SHARED_COMPILATION
+  common/objs{*}: c.poptions += -DBROTLICOMMON_SHARED_COMPILATION
+  enc/objs{*}:    c.poptions += -DBROTLIENC_SHARED_COMPILATION
+  dec/objs{*}:    c.poptions += -DBROTLIDEC_SHARED_COMPILATION
+}
+
+# libm is required on some platforms for the C99 log2() function. The
+# BROTLI_HAVE_LOG2 macro is defined to 1 if log2() is available and 0
+# otherwise.
+#
+# @@ TMP log2() has existed since C99, glibc 2.1 (1999), unknown versions of
+#    FreeBSD, OpenBSD, NetBSD, MacOS (BSD manpages mention only the other
+#    log() functions in the HISTORY section and MacOS says nothing) and,
+#    according to enc/fast_log.h, MSVC > 2012.
+#
+# If BROTLI_HAVE_LOG2 is undefined, enc/fast_log.h (the only place it's
+# currently referenced) defines it to 1 unless we're on MSVC <= 12 or Android
+# API levels < 18, in which case it defines it to 0.
+#
+# The configure build does not define this macro but the cmake one does. It
+# looks like the only reason they do this instead of letting enc/fast_log.h
+# take care of it is because cmake does not have built-in support to decide
+# whether or not libm needs to be linked.
+#
+# Therefore because we deal with libm statically we do not define
+# BROTLI_HAVE_LOG2 in order to prevent the log2() detection in enc/fast_log.h
+# from being disabled.
+#
+if ($linux || $bsd)
+  lib{$brotli_libs}: c.libs += -lm
 
 # Export options.
 #
-lib{brotli}:
-{
-  c.export.poptions = "-I$out_root" "-I$src_root"
-  c.export.libs = $intf_libs
-}
-
-liba{brotli}: c.export.poptions += -DLIBBROTLI_STATIC
-libs{brotli}: c.export.poptions += -DLIBBROTLI_SHARED
+lib{$brotli_libs}: c.export.poptions = "-I$src_base/include"
 
 # For pre-releases use the complete version to make sure they cannot be used
 # in place of another pre-release or the final version. See the version module
 # for details on the version.* variable values.
 #
 if $version.pre_release
-  lib{brotli}: bin.lib.version = "-$version.project_id"
+  lib{$brotli_libs}: bin.lib.version = "-$version.project_id"
 else
-  lib{brotli}: bin.lib.version = "-$version.major.$version.minor"
+  lib{$brotli_libs}: bin.lib.version = "-$version.major.$version.minor"
 
-# Install into the libbrotli/ subdirectory of, say, /usr/include/
-# recreating subdirectories.
+# Install into the brotli/ subdirectory of, say, /usr/include/.
 #
-h{*}:
-{
-  install         = include/libbrotli/
-  install.subdirs = true
-}
+h{*}: install = false
+include/brotli/h{*}: install = include/brotli/
