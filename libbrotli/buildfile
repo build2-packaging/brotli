@@ -2,9 +2,9 @@ brotli_libs = brotlicommon brotlienc brotlidec
 
 ./: lib{$brotli_libs}
 
-lib{brotlicommon}: include/h{** -encode -decode} common/{h c}{**}
-lib{brotlienc}:    include/h{encode} enc/{h c}{**} lib{brotlicommon}
-lib{brotlidec}:    include/h{decode} dec/{h c}{**} lib{brotlicommon}
+lib{brotlicommon}: include/brotli/h{** -encode -decode} common/{h c}{**}
+lib{brotlienc}:    include/brotli/h{encode} enc/{h c}{**} lib{brotlicommon}
+lib{brotlidec}:    include/brotli/h{decode} dec/{h c}{**} lib{brotlicommon}
 
 # Note that we are not distributing common/dictionary.bin* because its only
 # purpose, according to common/dictionary.h, is the sharing of the dictionary
@@ -59,7 +59,7 @@ elif $windows
 # currently referenced) defines it to 1 unless we're on MSVC <= 12 or Android
 # API levels < 18, in which case it defines it to 0.
 #
-# The configure build does not define this macro but the cmake one does. It
+# The autotools build does not define this macro but the cmake one does. It
 # looks like the only reason they do this instead of letting enc/fast_log.h
 # take care of it is because cmake does not have built-in support to decide
 # whether or not libm needs to be linked.
