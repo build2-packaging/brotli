@@ -2,22 +2,21 @@ brotli_libs = brotlicommon brotlienc brotlidec
 
 ./: lib{$brotli_libs}
 
-lib{brotlicommon}: include/h{**} common/{h c}{**}
-lib{brotlienc}:    include/h{**} enc/{h c}{**} lib{brotlicommon}
-lib{brotlidec}:    include/h{**} dec/{h c}{**} lib{brotlicommon}
+lib{brotlicommon}: include/h{** -encode -decode} common/{h c}{**}
+lib{brotlienc}:    include/h{encode} enc/{h c}{**} lib{brotlicommon}
+lib{brotlidec}:    include/h{decode} dec/{h c}{**} lib{brotlicommon}
 
-# @@ TMP Not distributing common/dictionary.bin* because its only purpose,
-#    according to common/dictionary.h, is the sharing of the dictionary data
-#    between multiple languages (e.g., the C and Java implementations).
+# Note that we are not distributing common/dictionary.bin* because its only
+# purpose, according to common/dictionary.h, is the sharing of the dictionary
+# data between multiple languages (e.g., the C and Java implementations).
 #
-#    common/dictionary.bin is the static dictionary defined in the RFC and
-#    common/dictionary.bin.br is the compressed version of that file.
+# common/dictionary.bin is the static dictionary defined in the RFC and
+# common/dictionary.bin.br is the compressed version of that file.
 #
-#    By default the dictionary data is inline in common/dictionary.c but if
-#    BROTLI_EXTERNAL_DICTIONARY_DATA is defined that data is omitted and the
-#    user can set the dictionary data using BrotliSetDictionaryData(const
-#    uint8_t*) in common/dictionary.h.
-#
+# By default the dictionary data is inline in common/dictionary.c but if
+# BROTLI_EXTERNAL_DICTIONARY_DATA is defined that data is omitted and the user
+# can set the dictionary data using BrotliSetDictionaryData(const uint8_t*) in
+# common/dictionary.h.
 
 linux   = ($c.target.class  == 'linux')
 freebsd = ($c.target.system == 'freebsd')
@@ -33,10 +32,6 @@ c.poptions =+ "-I$src_base/include"
 # which byte order header to include. (There are no Windows or OpenBSD/NetBSD
 # macros.)
 #
-# @@ TMP Their logic differs from ours in libbuild2-autoconf in that they
-#    include <machine/endian.h> on FreeBSD while we do sys/endian.h for both
-#    FreeBSD and NetBSD (the latter doesn't have machine/endian.h).
-#
 if $linux
   c.poptions += -DOS_LINUX
 elif $freebsd
@@ -47,7 +42,7 @@ elif $windows
 {
   # These macros are used (only) for the usual dllexport/dllimport logic on
   # Windows (see include/brotli/port.h). Note that the upstream cmake build
-  # defines them on all operating systems for some reason (but the configure
+  # defines them on all operating systems for some reason (but the autotools
   # build does not).
   #
   objs{*}:        c.poptions += -DBROTLI_SHARED_COMPILATION
@@ -59,11 +54,6 @@ elif $windows
 # libm is required on some platforms for the C99 log2() function. The
 # BROTLI_HAVE_LOG2 macro is defined to 1 if log2() is available and 0
 # otherwise.
-#
-# @@ TMP log2() has existed since C99, glibc 2.1 (1999), unknown versions of
-#    FreeBSD, OpenBSD, NetBSD, MacOS (BSD manpages mention only the other
-#    log() functions in the HISTORY section and MacOS says nothing) and,
-#    according to enc/fast_log.h, MSVC > 2012.
 #
 # If BROTLI_HAVE_LOG2 is undefined, enc/fast_log.h (the only place it's
 # currently referenced) defines it to 1 unless we're on MSVC <= 12 or Android
@@ -83,7 +73,13 @@ if ($linux || $bsd)
 
 # Export options.
 #
-lib{$brotli_libs}: c.export.poptions = "-I$src_base/include"
+# Note: let's not duplicate -I in enc/dec since common is our interface
+#       dependency.
+#
+lib{brotlicommon}: c.export.poptions = "-I$src_base/include"
+libs{brotlicommon}: c.export.poptions += -DBROTLI_SHARED_COMPILATION
+lib{brotlienc}: c.export.libs = lib{brotlicommon}
+lib{brotlidec}: c.export.libs = lib{brotlicommon}
 
 # For pre-releases use the complete version to make sure they cannot be used
 # in place of another pre-release or the final version. See the version module
@@ -94,7 +90,8 @@ if $version.pre_release
 else
   lib{$brotli_libs}: bin.lib.version = "-$version.major.$version.minor"
 
-# Install into the brotli/ subdirectory of, say, /usr/include/.
+# Install only public headers into the brotli/ subdirectory of, say,
+# /usr/include/.
 #
 h{*}: install = false
 include/brotli/h{*}: install = include/brotli/

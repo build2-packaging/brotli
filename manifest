@@ -1,12 +1,13 @@
 : 1
 name: libbrotli
+project: brotli
 version: 1.0.9-a.0.z
 summary: Brotli data compression C library
 license: MIT
 description-file: README
 url: https://github.com/google/brotli
 src-url: https://github.com/google/brotli
-package-url: https://github.com/build2-packaging/libbrotli
+package-url: https://github.com/build2-packaging/brotli
 package-email: packaging@build2.org ; Mailing list.
 email: brotli@googlegroups.com ; Mailing list
 build-error-email: builds@build2.org
