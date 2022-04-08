@@ -1,0 +1,6 @@
+: 1
+name: libbrotli
+version: 1.0.9
+project: brotli
+summary: Brotli data compression C library
+license: MIT
