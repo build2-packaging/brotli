@@ -18,33 +18,22 @@ lib{brotlidec}:    include/brotli/h{decode} dec/{h c}{**} lib{brotlicommon}
 # can set the dictionary data using BrotliSetDictionaryData(const uint8_t*) in
 # common/dictionary.h.
 
-linux   = ($c.target.class  == 'linux')
-freebsd = ($c.target.system == 'freebsd')
-macos   = ($c.target.class  == 'macos')
-windows = ($c.target.class  == 'windows')
-bsd     = ($c.target.class  == 'bsd')
+linux   = ($c.target.class == 'linux')
+windows = ($c.target.class == 'windows')
+bsd     = ($c.target.class == 'bsd')
 
 # Build options.
 #
 c.poptions =+ "-I$src_base/include"
 
-# These OS_* macros are (currently) only used by common/platform.h to decide
-# which byte order header to include. (There are no Windows or OpenBSD/NetBSD
-# macros.)
+# These macros are used (only) for the usual dllexport/dllimport logic on
+# Windows (see include/brotli/port.h). Note that the upstream CMake build
+# defines them for shared libraries on all operating systems where, however,
+# they only mark the API symbols with the default visibility, which they
+# already have.
 #
-if $linux
-  c.poptions += -DOS_LINUX
-elif $freebsd
-  c.poptions += -DOS_FREEBSD
-elif $macos
-  c.poptions += -DOS_MACOSX
-elif $windows
+if $windows
 {
-  # These macros are used (only) for the usual dllexport/dllimport logic on
-  # Windows (see include/brotli/port.h). Note that the upstream cmake build
-  # defines them on all operating systems for some reason (but the autotools
-  # build does not).
-  #
   objs{*}:        c.poptions += -DBROTLI_SHARED_COMPILATION
   common/objs{*}: c.poptions += -DBROTLICOMMON_SHARED_COMPILATION
   enc/objs{*}:    c.poptions += -DBROTLIENC_SHARED_COMPILATION
@@ -59,14 +48,9 @@ elif $windows
 # currently referenced) defines it to 1 unless we're on MSVC <= 12 or Android
 # API levels < 18, in which case it defines it to 0.
 #
-# The configure build does not define this macro but the cmake one does. It
-# looks like the only reason they do this instead of letting enc/fast_log.h
-# take care of it is because cmake does not have built-in support to decide
-# whether or not libm needs to be linked.
-#
-# Therefore because we deal with libm statically we do not define
-# BROTLI_HAVE_LOG2 in order to prevent the log2() detection in enc/fast_log.h
-# from being disabled.
+# The upstream CMake build likewise leaves this macro to enc/fast_log.h and
+# only checks whether log2() requires linking libm. We know this statically
+# and so link libm on the platforms that need it.
 #
 if ($linux || $bsd)
   lib{$brotli_libs}: c.libs += -lm
